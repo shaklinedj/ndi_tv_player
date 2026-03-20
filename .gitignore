@@ -1,0 +1,42 @@
+# Gradle files
+.gradle/
+build/
+app/build/
+*.log
+
+# IDE files
+.idea/
+*.iml
+.DS_Store
+
+# Android-specific
+local.properties
+.cxx/
+*.apk
+*.aar
+*.ap_
+*.dex
+captures/
+
+# User-specific
+**/google-services.json
+**/fabric.properties
+**/firebase-messaging-sw.js
+
+# Crash logs (to clean the project)
+crash2.txt
+crash_all.txt
+crash_log.txt
+clean_crash.txt
+phone_crash.txt
+phone_crash2.txt
+phone_crash_full.txt
+phone_logcat.txt
+build_errors.txt
+build_info.txt
+build_output.log
+build_output.txt
+build_output2.log
+build_output2.txt
+build3.log
+log.txt
