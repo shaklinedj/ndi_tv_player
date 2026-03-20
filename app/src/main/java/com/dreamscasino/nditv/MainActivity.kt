@@ -183,6 +183,10 @@ class MainActivity : AppCompatActivity() {
             if (!sources.contains(name)) {
                 sources.add(name)
                 adapter.notifyDataSetChanged()
+                if (sources.size == 1) {
+                    listView.requestFocus()
+                    listView.setSelection(0)
+                }
                 Log.d("NDI", "Found source: $name")
             }
         }

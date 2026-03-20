@@ -63,13 +63,15 @@
         <ListView
             android:id="@+id/listView"
             android:layout_width="match_parent"
-            android:layout_height="250dp"
-            android:divider="#11FFFFFF"
-            android:dividerHeight="1dp"
+            android:layout_height="300dp"
+            android:divider="@null"
+            android:dividerHeight="12dp"
             android:scrollbars="vertical"
             android:fadeScrollbars="false"
-            android:listSelector="@android:color/transparent"
-            android:drawSelectorOnTop="true" />
+            android:listSelector="@drawable/item_selector"
+            android:drawSelectorOnTop="true"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
 
     </LinearLayout>
 
