@@ -25,6 +25,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: ArrayAdapter<String>
     private var ndiLibLoaded = false
     private var multicastLock: WifiManager.MulticastLock? = null
+    
+    // Auto-reconnect persistence
+    private val PREFS_NAME = "NDI_PREFS"
+    private val KEY_LAST_SOURCE = "LAST_SOURCE"
+    private var lastSelectedSource: String? = null
+    private var isPlayerActive = false
+    private var isFirstLaunch = true
 
     // All dangerous permissions that require user approval (Android requests these one by one automatically)
     private val dangerousPermissions: List<String> = buildList {
@@ -44,6 +51,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var pendingPermissions = mutableListOf<String>()
+    private var isAutoLaunchAllowed = true
+    
+    // Activity launcher for PlayerActivity to handle result codes
+    private val playerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isPlayerActive = false
+        val source = lastSelectedSource ?: return@registerForActivityResult
+        
+        when (result.resultCode) {
+            PlayerActivity.RESULT_CONNECTION_LOST -> {
+                Log.d("NDI_Debug", "MainActivity: Connection lost detected. Removing source to allow re-discovery.")
+                // Removing from list so next detection will trigger auto-reconnect
+                sources.remove(source)
+                adapter.notifyDataSetChanged()
+                isAutoLaunchAllowed = true // Re-enable auto launch if signal lost
+            }
+            PlayerActivity.RESULT_MANUAL_EXIT -> {
+                Log.d("NDI_Debug", "MainActivity: User exited manually. Disabling immediate auto-launch.")
+                isAutoLaunchAllowed = false // Don't jump back in immediately
+            }
+        }
+    }
 
     // Single permission launcher — called repeatedly for one-by-one flow
     private val singlePermissionLauncher = registerForActivityResult(
@@ -78,6 +108,11 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
         
+        // Cargar última fuente guardada
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        lastSelectedSource = prefs.getString(KEY_LAST_SOURCE, null)
+        Log.d("NDI_Debug", "MainActivity: Last stored source: $lastSelectedSource")
+
         listView = findViewById(R.id.listView)
         tvStatus = findViewById(R.id.tvStatus)
 
@@ -86,19 +121,16 @@ class MainActivity : AppCompatActivity() {
 
         listView.setOnItemClickListener { _, _, position, _ ->
             val sourceName = sources[position]
-            Log.d("NDI_Debug", "MainActivity: Item clicked at position $position. Source: $sourceName")
+            Log.d("NDI_Debug", "MainActivity: Item clicked. Saving as last source: $sourceName")
             
-            try {
-                Log.d("NDI_Debug", "MainActivity: Starting PlayerActivity for $sourceName")
-                val intent = Intent(this, PlayerActivity::class.java).apply {
-                    putExtra("NDI_SOURCE_NAME", sourceName)
-                }
-                startActivity(intent)
-                Log.d("NDI_Debug", "MainActivity: startActivity called successfully")
-            } catch (e: Exception) {
-                Log.e("NDI_Debug", "MainActivity: Error starting PlayerActivity: ${e.message}", e)
-                Toast.makeText(this, "Error al abrir reproductor: ${e.message}", Toast.LENGTH_LONG).show()
-            }
+            // Guardar como última fuente
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .putString(KEY_LAST_SOURCE, sourceName)
+                .apply()
+            lastSelectedSource = sourceName
+            isAutoLaunchAllowed = true // Enable auto-launch for this new source
+            
+            launchPlayer(sourceName)
         }
 
         if (!ndiLibLoaded) {
@@ -125,6 +157,30 @@ class MainActivity : AppCompatActivity() {
             ).show()
             requestNextPermission()
         }
+    }
+
+    private fun launchPlayer(sourceName: String) {
+        if (isPlayerActive) return
+        
+        try {
+            Log.d("NDI_Debug", "MainActivity: Starting PlayerActivity for $sourceName")
+            isPlayerActive = true
+            val intent = Intent(this, PlayerActivity::class.java).apply {
+                putExtra("NDI_SOURCE_NAME", sourceName)
+            }
+            playerLauncher.launch(intent)
+            Log.d("NDI_Debug", "MainActivity: launch called successfully")
+        } catch (e: Exception) {
+            isPlayerActive = false
+            Log.e("NDI_Debug", "MainActivity: Error starting PlayerActivity: ${e.message}", e)
+            Toast.makeText(this, "Error al abrir reproductor: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        isPlayerActive = false
+        Log.d("NDI_Debug", "MainActivity: Resumed. isPlayerActive reset to false")
     }
 
     /**
@@ -188,6 +244,15 @@ class MainActivity : AppCompatActivity() {
                     listView.setSelection(0)
                 }
                 Log.d("NDI", "Found source: $name")
+
+                // Auto-reconexión si es la última fuente guardada
+                if (!isPlayerActive && isAutoLaunchAllowed && name == lastSelectedSource) {
+                    Log.d("NDI_Debug", "MainActivity: Auto-reconnecting to $name")
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "Reconectando a $name...", Toast.LENGTH_SHORT).show()
+                        launchPlayer(name)
+                    }
+                }
             }
         }
     }

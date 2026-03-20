@@ -111,63 +111,69 @@ Java_com_dreamscasino_nditv_PlayerActivity_startNdiReceiver(JNIEnv* env, jobject
     
     isReceiverRunning = true;
     
-    std::thread([pNDI_recv, window]() {
-        while (isReceiverRunning) {
-            NDIlib_video_frame_v2_t video_frame;
-            NDIlib_audio_frame_v2_t audio_frame;
-            NDIlib_metadata_frame_t metadata_frame;
-            
-            switch (NDIlib_recv_capture_v2(pNDI_recv, &video_frame, &audio_frame, &metadata_frame, 1000)) {
-                // No data
-                case NDIlib_frame_type_none:
-                    break;
-                
-                // Video data
-                case NDIlib_frame_type_video:
-                    // Only process frame if it has valid dimensions
-                    if (video_frame.xres > 0 && video_frame.yres > 0) {
-                        ANativeWindow_setBuffersGeometry(window, video_frame.xres, video_frame.yres, WINDOW_FORMAT_RGBA_8888);
-                        
-                        ANativeWindow_Buffer buffer;
-                        if (ANativeWindow_lock(window, &buffer, NULL) == 0) {
-                            uint8_t* out_pixels = static_cast<uint8_t*>(buffer.bits);
-                            uint8_t* in_pixels = video_frame.p_data;
-                            
-                            // Copy row by row since pitch could differ
-                            int copy_width = std::min((int)(buffer.stride * 4), video_frame.line_stride_in_bytes);
-                            for (int y = 0; y < video_frame.yres; y++) {
-                                memcpy(out_pixels + (y * buffer.stride * 4), 
-                                       in_pixels + (y * video_frame.line_stride_in_bytes), 
-                                       copy_width);
-                            }
-                            ANativeWindow_unlockAndPost(window);
-                        }
-                    }
-                    NDIlib_recv_free_video_v2(pNDI_recv, &video_frame);
-                    break;
-                
-                // Audio is ignored for this MVP
-                case NDIlib_frame_type_audio:
-                    NDIlib_recv_free_audio_v2(pNDI_recv, &audio_frame);
-                    break;
-                
-                case NDIlib_frame_type_metadata:
-                    NDIlib_recv_free_metadata(pNDI_recv, &metadata_frame);
-                    break;
-                
-                // There is a status change
-                case NDIlib_frame_type_status_change:
-                    break;
-                
-                // Everything else
-                case NDIlib_frame_type_error:
-                    break;
-            }
-        }
+    int none_count = 0;
+    while (isReceiverRunning) {
+        NDIlib_video_frame_v2_t video_frame;
+        NDIlib_audio_frame_v2_t audio_frame;
+        NDIlib_metadata_frame_t metadata_frame;
         
-        NDIlib_recv_destroy(pNDI_recv);
-        ANativeWindow_release(window);
-    }).detach();
+        NDIlib_frame_type_e frame_type = NDIlib_recv_capture_v2(pNDI_recv, &video_frame, &audio_frame, &metadata_frame, 1000);
+        
+        switch (frame_type) {
+            case NDIlib_frame_type_none:
+                none_count++;
+                // If no frame for 10 seconds, assume connection lost
+                if (none_count > 10) {
+                    LOGD("No data for 10 seconds. Receiver exiting.");
+                    isReceiverRunning = false;
+                }
+                break;
+            
+            case NDIlib_frame_type_video:
+                none_count = 0;
+                if (video_frame.xres > 0 && video_frame.yres > 0) {
+                    ANativeWindow_setBuffersGeometry(window, video_frame.xres, video_frame.yres, WINDOW_FORMAT_RGBA_8888);
+                    
+                    ANativeWindow_Buffer buffer;
+                    if (ANativeWindow_lock(window, &buffer, NULL) == 0) {
+                        uint8_t* out_pixels = static_cast<uint8_t*>(buffer.bits);
+                        uint8_t* in_pixels = video_frame.p_data;
+                        
+                        int copy_width = std::min((int)(buffer.stride * 4), video_frame.line_stride_in_bytes);
+                        for (int y = 0; y < video_frame.yres; y++) {
+                            memcpy(out_pixels + (y * buffer.stride * 4), 
+                                   in_pixels + (y * video_frame.line_stride_in_bytes), 
+                                   copy_width);
+                        }
+                        ANativeWindow_unlockAndPost(window);
+                    }
+                }
+                NDIlib_recv_free_video_v2(pNDI_recv, &video_frame);
+                break;
+            
+            case NDIlib_frame_type_audio:
+                none_count = 0;
+                NDIlib_recv_free_audio_v2(pNDI_recv, &audio_frame);
+                break;
+            
+            case NDIlib_frame_type_metadata:
+                none_count = 0;
+                NDIlib_recv_free_metadata(pNDI_recv, &metadata_frame);
+                break;
+            
+            case NDIlib_frame_type_status_change:
+                LOGD("NDI Status Change");
+                break;
+            
+            case NDIlib_frame_type_error:
+                LOGE("NDI Frame Type Error");
+                isReceiverRunning = false;
+                break;
+        }
+    }
+    
+    NDIlib_recv_destroy(pNDI_recv);
+    ANativeWindow_release(window);
 }
 
 extern "C" JNIEXPORT void JNICALL

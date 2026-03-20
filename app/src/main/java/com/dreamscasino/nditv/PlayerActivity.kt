@@ -22,6 +22,9 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback {
     private val DOUBLE_CLICK_TIME_DELTA: Long = 800 // Reduced sensitivity for easier double click
 
     companion object {
+        const val RESULT_CONNECTION_LOST = 100
+        const val RESULT_MANUAL_EXIT = 101
+        
         init {
             Log.d("NDI_Debug", "PlayerActivity: Static init - Loading libraries")
             try {
@@ -105,10 +108,22 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback {
                     Log.d("NDI_Debug", "PlayerActivity: Calling native startNdiReceiver")
                     startNdiReceiver(sourceName!!, surface)
                     Log.d("NDI_Debug", "PlayerActivity: native startNdiReceiver returned")
+                    
+                    // If we get here, the receiver loop ended.
+                    // If it wasn't requested by onDestroy, it's a connection drop.
+                    if (!isDestroyed && !isFinishing) {
+                        runOnUiThread {
+                            android.widget.Toast.makeText(this@PlayerActivity, "Error: Conexión perdida con la fuente", android.widget.Toast.LENGTH_LONG).show()
+                            setResult(RESULT_CONNECTION_LOST)
+                            finish()
+                        }
+                    }
                 } catch (e: Exception) {
                     Log.e("NDI_Debug", "PlayerActivity: Thread - Receiver error: ${e.message}")
+                    runOnUiThread { finish() }
                 } catch (e: UnsatisfiedLinkError) {
                     Log.e("NDI_Debug", "PlayerActivity: Thread - JNI error: ${e.message}")
+                    runOnUiThread { finish() }
                 }
             }.start()
         } else {
@@ -156,6 +171,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback {
                 
                 if (delta < DOUBLE_CLICK_TIME_DELTA) {
                     Log.d("NDI_Debug", "PlayerActivity: DOUBLE CLICK CONFIRMED. Closing player.")
+                    setResult(RESULT_MANUAL_EXIT)
                     finish()
                     return true
                 }
@@ -169,6 +185,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback {
             // Allow back button to work normally as backup
             if (keyCode == KeyEvent.KEYCODE_BACK) {
                 Log.d("NDI_Debug", "PlayerActivity: BACK key detected. Closing.")
+                setResult(RESULT_MANUAL_EXIT)
                 finish()
                 return true
             }
