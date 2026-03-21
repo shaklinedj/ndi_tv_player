@@ -92,6 +92,7 @@ Java_com_dreamscasino_nditv_PlayerActivity_startNdiReceiver(JNIEnv* env, jobject
     NDIlib_recv_create_v3_t recv_create_desc;
     recv_create_desc.color_format = NDIlib_recv_color_format_e_RGBX_RGBA;
     recv_create_desc.bandwidth = NDIlib_recv_bandwidth_highest;
+    recv_create_desc.allow_video_fields = false; // Disable de-interlacing to save CPU
     recv_create_desc.p_ndi_recv_name = "NDI TV Player";
     
     NDIlib_recv_instance_t pNDI_recv = NDIlib_recv_create_v3(&recv_create_desc);
@@ -112,6 +113,9 @@ Java_com_dreamscasino_nditv_PlayerActivity_startNdiReceiver(JNIEnv* env, jobject
     isReceiverRunning = true;
     
     int none_count = 0;
+    int current_xres = 0;
+    int current_yres = 0;
+    
     while (isReceiverRunning) {
         NDIlib_video_frame_v2_t video_frame;
         NDIlib_audio_frame_v2_t audio_frame;
@@ -132,18 +136,29 @@ Java_com_dreamscasino_nditv_PlayerActivity_startNdiReceiver(JNIEnv* env, jobject
             case NDIlib_frame_type_video:
                 none_count = 0;
                 if (video_frame.xres > 0 && video_frame.yres > 0) {
-                    ANativeWindow_setBuffersGeometry(window, video_frame.xres, video_frame.yres, WINDOW_FORMAT_RGBA_8888);
+                    // Only update geometry if resolution changed to save CPU time
+                    if (video_frame.xres != current_xres || video_frame.yres != current_yres) {
+                        ANativeWindow_setBuffersGeometry(window, video_frame.xres, video_frame.yres, WINDOW_FORMAT_RGBA_8888);
+                        current_xres = video_frame.xres;
+                        current_yres = video_frame.yres;
+                    }
                     
                     ANativeWindow_Buffer buffer;
                     if (ANativeWindow_lock(window, &buffer, NULL) == 0) {
                         uint8_t* out_pixels = static_cast<uint8_t*>(buffer.bits);
                         uint8_t* in_pixels = video_frame.p_data;
                         
-                        int copy_width = std::min((int)(buffer.stride * 4), video_frame.line_stride_in_bytes);
-                        for (int y = 0; y < video_frame.yres; y++) {
-                            memcpy(out_pixels + (y * buffer.stride * 4), 
-                                   in_pixels + (y * video_frame.line_stride_in_bytes), 
-                                   copy_width);
+                        // Optimize memory copy: if strides match, perform a single bulk copy
+                        int buffer_stride_bytes = buffer.stride * 4;
+                        if (video_frame.line_stride_in_bytes == buffer_stride_bytes) {
+                            memcpy(out_pixels, in_pixels, (size_t)buffer_stride_bytes * video_frame.yres);
+                        } else {
+                            int copy_width = std::min((int)buffer_stride_bytes, video_frame.line_stride_in_bytes);
+                            for (int y = 0; y < video_frame.yres; y++) {
+                                memcpy(out_pixels + (y * buffer_stride_bytes), 
+                                       in_pixels + (y * video_frame.line_stride_in_bytes), 
+                                       copy_width);
+                            }
                         }
                         ANativeWindow_unlockAndPost(window);
                     }
