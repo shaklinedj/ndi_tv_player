@@ -116,6 +116,10 @@ Java_com_dreamscasino_nditv_PlayerActivity_startNdiReceiver(JNIEnv* env, jobject
     int current_xres = 0;
     int current_yres = 0;
     
+    bool is_first_frame = true;
+    jclass playerClass = env->GetObjectClass(thiz);
+    jmethodID onFirstFrameMethod = env->GetMethodID(playerClass, "onFirstFrameReceived", "()V");
+    
     while (isReceiverRunning) {
         NDIlib_video_frame_v2_t video_frame;
         NDIlib_audio_frame_v2_t audio_frame;
@@ -136,6 +140,11 @@ Java_com_dreamscasino_nditv_PlayerActivity_startNdiReceiver(JNIEnv* env, jobject
             case NDIlib_frame_type_video:
                 none_count = 0;
                 if (video_frame.xres > 0 && video_frame.yres > 0) {
+                    if (is_first_frame) {
+                        env->CallVoidMethod(thiz, onFirstFrameMethod);
+                        is_first_frame = false;
+                    }
+                    
                     // Only update geometry if resolution changed to save CPU time
                     if (video_frame.xres != current_xres || video_frame.yres != current_yres) {
                         ANativeWindow_setBuffersGeometry(window, video_frame.xres, video_frame.yres, WINDOW_FORMAT_RGBA_8888);

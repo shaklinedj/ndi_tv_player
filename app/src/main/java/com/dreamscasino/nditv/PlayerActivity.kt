@@ -54,13 +54,11 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback {
             sourceName = intent.getStringExtra("NDI_SOURCE_NAME")
             Log.d("NDI_Debug", "PlayerActivity: NDI_SOURCE_NAME = $sourceName")
 
-            Log.d("NDI_Debug", "PlayerActivity: Creating SurfaceView")
-            surfaceView = SurfaceView(this)
-            surfaceView.isFocusable = true
-            surfaceView.isFocusableInTouchMode = true
-            surfaceView.requestFocus()
+            Log.d("NDI_Debug", "PlayerActivity: Inflating layout")
+            setContentView(R.layout.activity_player)
             
-            setContentView(surfaceView)
+            surfaceView = findViewById(R.id.surfaceView)
+            surfaceView.requestFocus()
             
             Log.d("NDI_Debug", "PlayerActivity: Adding SurfaceHolder callback")
             surfaceView.holder.addCallback(this)
@@ -145,6 +143,13 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback {
             Log.e("NDI_Debug", "PlayerActivity: Stop error: ${e.message}")
         } catch (e: UnsatisfiedLinkError) {
             Log.e("NDI_Debug", "PlayerActivity: Stop JNI error")
+        }
+    }
+
+    fun onFirstFrameReceived() {
+        Log.d("NDI_Debug", "PlayerActivity: First frame received, hiding loading indicator")
+        runOnUiThread {
+            findViewById<View>(R.id.loadingLayout)?.visibility = View.GONE
         }
     }
 
