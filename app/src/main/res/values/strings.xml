@@ -1,3 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Dreams NDI Player</string>
+
+    <!-- UI strings -->
+    <string name="app_title">NDI TV PLAYER</string>
+    <string name="status_searching">Buscando señales…</string>
+    <string name="status_checking_permissions">Verificando permisos…</string>
+    <string name="status_searching_sources">Buscando fuentes NDI en la red…</string>
+    <string name="status_select_stream">Selecciona una transmisión:</string>
+    <string name="status_connecting">Conectando…</string>
+    <string name="status_error_lib">Error: Librería NDI no soportada\n(Arquitectura arm64-v8a requerida)</string>
+    <string name="status_error_discovery">Fallo en la búsqueda:\n%1$s</string>
+
+    <!-- Permissions / toasts -->
+    <string name="toast_lib_not_loaded">Error: librería NDI no cargada</string>
+    <string name="toast_permission_denied">Permiso denegado: %1$s</string>
+    <string name="toast_permissions_required">Se solicitarán %1$d permiso(s) necesario(s)</string>
+    <string name="toast_player_error">Error al abrir reproductor: %1$s</string>
+    <string name="toast_reconnecting">Reconectando a %1$s…</string>
+    <string name="toast_press_again_to_exit">Presiona de nuevo para salir</string>
+    <string name="toast_connection_lost">Conexión perdida con la fuente</string>
 </resources>

@@ -5,15 +5,23 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <!-- Required for some NDI mDNS discovery -->
+    <!-- Required for NDI mDNS discovery -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <!-- Android 13+ WiFi scanning -->
-    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="tiramisu" />
     <!-- Android 10-12 WiFi scanning requires location -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Notifications Android 14+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Fix: LeanbackUsesWifi — WiFi is optional, app also works on Ethernet -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+
+    <!-- Fix: PermissionImpliesUnsupportedHardware — GPS is not required -->
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -29,8 +37,10 @@
         android:theme="@style/Theme.AppCompat.NoActionBar"
         android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round">
-        
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:banner="@mipmap/ic_launcher">
+        <!-- Fix: MissingTvBanner — required for Leanback LAUNCHER activities -->
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -41,7 +51,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        
+
         <activity android:name=".PlayerActivity"
             android:exported="true"
             android:configChanges="orientation|keyboardHidden|screenSize"

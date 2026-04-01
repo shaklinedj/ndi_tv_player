@@ -174,7 +174,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback {
                     finish()
                 } else {
                     lastClickTime = now
-                    Toast.makeText(this, "Presiona de nuevo para salir", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.toast_press_again_to_exit), Toast.LENGTH_SHORT).show()
                 }
                 true
             }

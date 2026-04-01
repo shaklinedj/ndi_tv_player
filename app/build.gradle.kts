@@ -12,7 +12,7 @@ android {
     defaultConfig {
         applicationId = "com.dreamscasino.nditv"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 9
         versionName = "1.8"
 
@@ -69,8 +69,8 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.leanback:leanback:1.0.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.leanback:leanback:1.1.0-rc02")
+    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
 }

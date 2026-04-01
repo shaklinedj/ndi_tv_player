@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity() {
             Log.d("NDI", "Permission granted: $current")
         } else {
             Log.w("NDI", "Permission denied: $current")
-            Toast.makeText(this, "Permiso denegado: $current", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_permission_denied, current), Toast.LENGTH_SHORT).show()
         }
         // Continue requesting the next permission, or start if all done
         requestNextPermission()
@@ -134,13 +134,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (!ndiLibLoaded) {
-            tvStatus.text = "Error: Librería NDI no soportada\n(Arquitectura arm64-v8a requerida)"
+            tvStatus.text = getString(R.string.status_error_lib)
             tvStatus.setTextColor(android.graphics.Color.RED)
-            Toast.makeText(this, "Error: librería NDI no cargada", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.toast_lib_not_loaded, Toast.LENGTH_LONG).show()
             return
         }
 
-        tvStatus.text = "Verificando permisos..."
+        tvStatus.text = getString(R.string.status_checking_permissions)
 
         // Build list of permissions not yet granted
         pendingPermissions = dangerousPermissions.filter {
@@ -152,7 +152,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             Toast.makeText(
                 this,
-                "Se solicitarán ${pendingPermissions.size} permiso(s) necesario(s)",
+                getString(R.string.toast_permissions_required, pendingPermissions.size),
                 Toast.LENGTH_LONG
             ).show()
             requestNextPermission()
@@ -173,7 +173,7 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             isPlayerActive = false
             Log.e("NDI_Debug", "MainActivity: Error starting PlayerActivity: ${e.message}", e)
-            Toast.makeText(this, "Error al abrir reproductor: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_player_error, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -205,7 +205,7 @@ class MainActivity : AppCompatActivity() {
         multicastLock?.acquire()
         Log.d("NDI", "Multicast lock acquired")
 
-        tvStatus.text = "Buscando fuentes NDI en la red..."
+        tvStatus.text = getString(R.string.status_searching_sources)
         sources.clear()
         adapter.notifyDataSetChanged()
 
@@ -215,7 +215,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Log.e("NDI", "Discovery error: ${e.message}")
                 runOnUiThread {
-                    tvStatus.text = "Fallo en la búsqueda:\n${e.message}"
+                    tvStatus.text = getString(R.string.status_error_discovery, e.message)
                     tvStatus.setTextColor(android.graphics.Color.RED)
                 }
             }
@@ -234,7 +234,7 @@ class MainActivity : AppCompatActivity() {
     fun onSourceFound(name: String) {
         runOnUiThread {
             if (sources.isEmpty()) {
-                tvStatus.text = "Selecciona una transmisión:"
+                tvStatus.text = getString(R.string.status_select_stream)
             }
             if (!sources.contains(name)) {
                 sources.add(name)
@@ -249,7 +249,7 @@ class MainActivity : AppCompatActivity() {
                 if (!isPlayerActive && isAutoLaunchAllowed && name == lastSelectedSource) {
                     Log.d("NDI_Debug", "MainActivity: Auto-reconnecting to $name")
                     runOnUiThread {
-                        Toast.makeText(this@MainActivity, "Reconectando a $name...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, getString(R.string.toast_reconnecting, name), Toast.LENGTH_SHORT).show()
                         launchPlayer(name)
                     }
                 }

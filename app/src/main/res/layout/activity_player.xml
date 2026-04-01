@@ -25,11 +25,12 @@
             android:indeterminate="true"
             android:indeterminateTint="#FFFFFF" />
 
+        <!-- Fix: HardcodedText — use string resource -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Conectando..."
+            android:text="@string/status_connecting"
             android:textColor="#FFFFFF"
             android:textSize="18sp"
             android:fontFamily="sans-serif-medium" />
