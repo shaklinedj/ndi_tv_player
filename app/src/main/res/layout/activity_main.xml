@@ -81,5 +81,48 @@
             android:focusableInTouchMode="true" />
 
     </LinearLayout>
+    
+    <!-- Auto-reconnect overlay: hidden by default -->
+    <FrameLayout
+        android:id="@+id/autoReconnectOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#DD000000"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true">
+        
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:gravity="center">
+            
+            <ProgressBar
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:indeterminate="true"
+                android:indeterminateTint="#FFFFFF" />
+            
+            <TextView
+                android:id="@+id/tvReconnectSource"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/auto_reconnect_msg"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+                
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Reintentando automáticamente..."
+                android:textColor="#999999"
+                android:textSize="16sp" />
+        </LinearLayout>
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

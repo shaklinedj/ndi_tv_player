@@ -25,6 +25,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: ArrayAdapter<String>
     private var ndiLibLoaded = false
     private var multicastLock: WifiManager.MulticastLock? = null
+    private lateinit var autoReconnectOverlay: View
+    private lateinit var tvReconnectSource: TextView
+    private var isNetworkDisconnected = false
     
     // Auto-reconnect persistence
     private val PREFS_NAME = "NDI_PREFS"
@@ -52,6 +55,7 @@ class MainActivity : AppCompatActivity() {
 
     private var pendingPermissions = mutableListOf<String>()
     private var isAutoLaunchAllowed = true
+    private var isInitialBootAutoLaunchChecked = false
     
     // Activity launcher for PlayerActivity to handle result codes
     private val playerLauncher = registerForActivityResult(
@@ -67,10 +71,12 @@ class MainActivity : AppCompatActivity() {
                 sources.remove(source)
                 adapter.notifyDataSetChanged()
                 isAutoLaunchAllowed = true // Re-enable auto launch if signal lost
+                updateAutoReconnectUI()
             }
             PlayerActivity.RESULT_MANUAL_EXIT -> {
                 Log.d("NDI_Debug", "MainActivity: User exited manually. Disabling immediate auto-launch.")
                 isAutoLaunchAllowed = false // Don't jump back in immediately
+                updateAutoReconnectUI()
             }
         }
     }
@@ -129,9 +135,23 @@ class MainActivity : AppCompatActivity() {
                 .apply()
             lastSelectedSource = sourceName
             isAutoLaunchAllowed = true // Enable auto-launch for this new source
+            updateAutoReconnectUI()
             
             launchPlayer(sourceName)
         }
+        
+        autoReconnectOverlay = findViewById(R.id.autoReconnectOverlay)
+        tvReconnectSource = findViewById(R.id.tvReconnectSource)
+        
+        // Listen to UI clicks on the overlay to cancel auto-reconnect
+        autoReconnectOverlay.setOnClickListener {
+            isAutoLaunchAllowed = false
+            updateAutoReconnectUI()
+            Toast.makeText(this, "Autoconexión cancelada. Buscando fuentes...", Toast.LENGTH_SHORT).show()
+        }
+        
+        setupNetworkListener()
+        updateAutoReconnectUI()
 
         if (!ndiLibLoaded) {
             tvStatus.text = getString(R.string.status_error_lib)
@@ -181,6 +201,47 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         isPlayerActive = false
         Log.d("NDI_Debug", "MainActivity: Resumed. isPlayerActive reset to false")
+        updateAutoReconnectUI()
+    }
+    
+    private fun updateAutoReconnectUI() {
+        runOnUiThread {
+            if (!isPlayerActive && isAutoLaunchAllowed && lastSelectedSource != null && !sources.contains(lastSelectedSource)) {
+                // We're actively waiting for the last source to appear
+                autoReconnectOverlay.visibility = View.VISIBLE
+                tvReconnectSource.text = getString(R.string.auto_reconnect_msg, lastSelectedSource)
+                
+                if (isNetworkDisconnected) {
+                    tvReconnectSource.text = getString(R.string.no_signal_msg)
+                }
+            } else {
+                autoReconnectOverlay.visibility = View.GONE
+            }
+        }
+    }
+    
+    private fun setupNetworkListener() {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val request = android.net.NetworkRequest.Builder()
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+            
+        cm.registerNetworkCallback(request, object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) {
+                Log.d("NDI_Debug", "Network available. Restarting discovery.")
+                isNetworkDisconnected = false
+                runOnUiThread {
+                    startDiscovery()
+                    updateAutoReconnectUI()
+                }
+            }
+            
+            override fun onLost(network: android.net.Network) {
+                Log.d("NDI_Debug", "Network lost.")
+                isNetworkDisconnected = true
+                runOnUiThread { updateAutoReconnectUI() }
+            }
+        })
     }
 
     /**
@@ -248,12 +309,13 @@ class MainActivity : AppCompatActivity() {
                 // Auto-reconexión si es la última fuente guardada
                 if (!isPlayerActive && isAutoLaunchAllowed && name == lastSelectedSource) {
                     Log.d("NDI_Debug", "MainActivity: Auto-reconnecting to $name")
+                    updateAutoReconnectUI()
                     runOnUiThread {
-                        Toast.makeText(this@MainActivity, getString(R.string.toast_reconnecting, name), Toast.LENGTH_SHORT).show()
                         launchPlayer(name)
                     }
                 }
             }
+            updateAutoReconnectUI()
         }
     }
 }

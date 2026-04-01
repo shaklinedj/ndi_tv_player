@@ -20,4 +20,6 @@
     <string name="toast_reconnecting">Reconectando a %1$s…</string>
     <string name="toast_press_again_to_exit">Presiona de nuevo para salir</string>
     <string name="toast_connection_lost">Conexión perdida con la fuente</string>
+    <string name="auto_reconnect_msg">Esperando señal de %1$s…</string>
+    <string name="no_signal_msg">Sin conexión a red. Verifique su WiFi o Ethernet.</string>
 </resources>
